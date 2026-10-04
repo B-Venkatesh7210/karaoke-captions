@@ -1,0 +1,20 @@
+{
+  "name": "Minimal",
+  "description": "No box, soft shadow, spoken words stay lit.",
+  "style": {
+    "font_family": "Segoe UI",
+    "font_size": 56,
+    "bold": true,
+    "text_color": "#FFFFFF",
+    "text_opacity": 55,
+    "highlight_color": "#FFFFFF",
+    "highlight_mode": "progressive",
+    "background": "none",
+    "shadow_color": "#000000",
+    "shadow_opacity": 70,
+    "shadow_depth": 2,
+    "position": "bottom",
+    "margin_v": 80,
+    "max_words": 7
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "Neon fill",
+  "description": "Smooth karaoke sweep in cyan over a dark outline.",
+  "style": {
+    "font_family": "Segoe UI",
+    "font_size": 68,
+    "bold": true,
+    "text_color": "#E2E8F0",
+    "text_opacity": 85,
+    "highlight_color": "#22D3EE",
+    "highlight_mode": "fill",
+    "background": "outline",
+    "outline_color": "#0B1020",
+    "outline_width": 4,
+    "shadow_color": "#22D3EE",
+    "shadow_opacity": 25,
+    "shadow_depth": 0,
+    "position": "bottom",
+    "margin_v": 90,
+    "max_words": 6
+  }
+}

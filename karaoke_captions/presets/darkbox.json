@@ -1,0 +1,22 @@
+{
+  "name": "Darkbox",
+  "description": "Inter on a soft dark box, purple active word.",
+  "style": {
+    "font_family": "Inter",
+    "font_size": 64,
+    "bold": true,
+    "text_color": "#FFFFFF",
+    "highlight_color": "#A855F7",
+    "highlight_mode": "word",
+    "background": "box",
+    "box_color": "#111111",
+    "box_opacity": 50,
+    "padding_x": 9,
+    "padding_y": 9,
+    "shadow_depth": 0,
+    "position": "bottom",
+    "margin_v": 72,
+    "margin_h": 80,
+    "max_words": 6
+  }
+}

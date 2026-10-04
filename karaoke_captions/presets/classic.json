@@ -1,0 +1,21 @@
+{
+  "name": "Classic outline",
+  "description": "Arial with a thin outline and drop shadow.",
+  "style": {
+    "font_family": "Arial",
+    "font_size": 64,
+    "bold": true,
+    "text_color": "#FFFFFF",
+    "highlight_color": "#A855F7",
+    "highlight_mode": "word",
+    "background": "outline",
+    "outline_color": "#151515",
+    "outline_width": 3,
+    "shadow_color": "#000000",
+    "shadow_opacity": 50,
+    "shadow_depth": 1,
+    "position": "bottom",
+    "margin_v": 72,
+    "max_words": 6
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "Bold pop",
+  "description": "Short-form style: big caps, yellow pop on the active word.",
+  "style": {
+    "font_family": "Arial Black",
+    "font_size": 88,
+    "bold": false,
+    "uppercase": true,
+    "text_color": "#FFFFFF",
+    "highlight_color": "#FACC15",
+    "highlight_mode": "word",
+    "active_scale": 115,
+    "background": "outline",
+    "outline_color": "#000000",
+    "outline_width": 6,
+    "shadow_color": "#000000",
+    "shadow_opacity": 60,
+    "shadow_depth": 4,
+    "position": "center",
+    "margin_v": 0,
+    "max_words": 3
+  }
+}

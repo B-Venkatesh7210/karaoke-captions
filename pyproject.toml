@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "karaoke-captions"
+version = "0.1.0"
+description = "Word-by-word karaoke captions from any audio. Edit and style them in a local web app, export transparent overlays or finished videos."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "python-multipart>=0.0.9",
+  "fonttools>=4.50",
+  "faster-whisper>=1.1",
+]
+keywords = ["captions", "subtitles", "karaoke", "whisper", "ffmpeg", "ass", "video"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Environment :: Web Environment",
+  "Topic :: Multimedia :: Video",
+]
+
+[project.scripts]
+karaoke-captions = "karaoke_captions.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["karaoke_captions*"]
+
+[tool.setuptools.package-data]
+karaoke_captions = ["static/**/*", "presets/*.json"]

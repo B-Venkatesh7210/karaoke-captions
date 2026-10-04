@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Karaoke Captions</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23a855f7'/><rect x='6' y='18' width='20' height='6' rx='2' fill='white'/><rect x='6' y='18' width='9' height='6' rx='2' fill='%23111'/></svg>">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/">
+      <span class="brand-mark"><span></span></span>
+      Karaoke Captions
+    </a>
+    <div class="topbar-project" id="topbarProject" hidden>
+      <span class="sep">/</span>
+      <input id="projectName" class="project-name" spellcheck="false" aria-label="Project name">
+    </div>
+    <div class="topbar-right">
+      <span id="saveState" class="save-state"></span>
+      <button id="btnExport" class="btn primary" hidden>
+        <svg viewBox="0 0 24 24" class="icon"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg>
+        Export
+      </button>
+    </div>
+  </header>
+
+  <!-- Home -->
+  <main id="viewHome" class="view view-home" hidden>
+    <section class="hero">
+      <h1>Karaoke captions from any voice-over</h1>
+      <p>Upload audio or video, fix the transcript, style the captions over a template video, and export a transparent overlay or a finished MP4. Everything runs on your computer.</p>
+    </section>
+
+    <div id="healthWarnings"></div>
+
+    <section class="card upload-card">
+      <label class="dropzone" id="dropzone">
+        <input type="file" id="fileInput" accept="audio/*,video/*,.mkv,.mov" hidden>
+        <svg viewBox="0 0 24 24" class="dz-icon"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        <strong>Drop an audio or video file</strong>
+        <span>or click to browse · WAV, MP3, M4A, MP4, MOV, MKV…</span>
+      </label>
+
+      <div class="upload-options">
+        <label class="field">
+          <span>Accuracy</span>
+          <select id="optModel">
+            <option value="tiny">Tiny · fastest</option>
+            <option value="base">Base</option>
+            <option value="small" selected>Small · balanced</option>
+            <option value="medium">Medium</option>
+            <option value="large-v3-turbo">Large v3 Turbo · accurate & quick</option>
+            <option value="large-v3">Large v3 · most accurate</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Language</span>
+          <select id="optLanguage">
+            <option value="">Detect automatically</option>
+            <option value="en">English</option>
+            <option value="hi">Hindi</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="pt">Portuguese</option>
+            <option value="it">Italian</option>
+            <option value="nl">Dutch</option>
+            <option value="ja">Japanese</option>
+            <option value="ko">Korean</option>
+            <option value="zh">Chinese</option>
+            <option value="ar">Arabic</option>
+            <option value="ru">Russian</option>
+            <option value="ta">Tamil</option>
+            <option value="te">Telugu</option>
+            <option value="bn">Bengali</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Device</span>
+          <select id="optDevice">
+            <option value="auto">Auto (GPU if available)</option>
+            <option value="cpu">CPU</option>
+            <option value="cuda">NVIDIA GPU (CUDA)</option>
+          </select>
+        </label>
+        <label class="field field-wide">
+          <span>Names & terms <em>helps spell brand names right</em></span>
+          <input id="optPrompt" placeholder="e.g. Lyzr, Tatum Signal, Venkatesh">
+        </label>
+        <label class="field field-wide import-field">
+          <span>Already have word timings? <em>optional words.json, skips transcription</em></span>
+          <input type="file" id="wordsInput" accept=".json,application/json">
+        </label>
+      </div>
+
+      <div class="upload-progress" id="uploadProgress" hidden>
+        <div class="progress"><div id="uploadBar"></div></div>
+        <span id="uploadLabel">Uploading…</span>
+      </div>
+    </section>
+
+    <section class="recent" id="recentSection" hidden>
+      <h2>Recent projects</h2>
+      <div class="recent-list" id="recentList"></div>
+    </section>
+  </main>
+
+  <!-- Working (transcribing) -->
+  <main id="viewWorking" class="view view-center" hidden>
+    <div class="card working-card">
+      <div class="pulse"><span></span><span></span><span></span><span></span><span></span></div>
+      <h2 id="workTitle">Transcribing</h2>
+      <p id="workMessage" class="muted">Starting…</p>
+      <div class="progress big"><div id="workBar"></div></div>
+      <div class="work-meta"><span id="workPct">0%</span><span id="workElapsed"></span></div>
+      <p class="muted small">You can leave this page. The work continues in the background.</p>
+      <button id="btnCancelWork" class="btn ghost">Cancel</button>
+    </div>
+  </main>
+
+  <!-- Error -->
+  <main id="viewError" class="view view-center" hidden>
+    <div class="card working-card">
+      <h2>Something went wrong</h2>
+      <p id="errorMessage" class="error-text"></p>
+      <div class="row-gap">
+        <button id="btnRetry" class="btn primary">Try again</button>
+        <a href="#/" class="btn ghost">Back to projects</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Studio -->
+  <main id="viewStudio" class="view view-studio" hidden>
+    <section class="studio-main">
+      <div class="stage-toolbar">
+        <div class="bg-picker" id="bgPicker" role="radiogroup" aria-label="Preview background"></div>
+        <div class="stage-toolbar-right">
+          <label class="btn ghost small" title="Upload a video to preview captions on">
+            <input type="file" id="templateInput" accept="video/*,.mov,.mkv" hidden>
+            + Template video
+          </label>
+          <label class="switch" title="Show the real libass render when paused (exactly what export produces)">
+            <input type="checkbox" id="exactToggle">
+            <span class="switch-track"></span>
+            Exact render
+          </label>
+        </div>
+      </div>
+
+      <div class="stage-wrap" id="stageWrap">
+        <div class="stage" id="stage">
+          <div class="stage-bg" id="stageBg"></div>
+          <video id="bgVideo" class="stage-video" muted loop playsinline preload="auto"></video>
+          <div class="canvas" id="canvas"><div class="caption-layer" id="captionLayer"></div></div>
+          <img id="exactImg" class="exact-img" alt="" hidden>
+          <span class="stage-badge" id="stageBadge">Live preview</span>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button class="btn icon-btn play" id="btnPlay" title="Play / pause (Space)">
+          <svg viewBox="0 0 24 24" class="icon fill" id="iconPlay"><path d="M7 5v14l12-7z"/></svg>
+          <svg viewBox="0 0 24 24" class="icon fill" id="iconPause" hidden><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+        </button>
+        <span class="time" id="timeLabel">0:00.00</span>
+        <div class="scrubber" id="scrubber">
+          <canvas id="scrubLines"></canvas>
+          <div class="scrub-fill" id="scrubFill"></div>
+          <div class="scrub-head" id="scrubHead"></div>
+        </div>
+        <span class="time muted" id="durationLabel">0:00</span>
+        <select id="speedSelect" class="mini-select" title="Playback speed">
+          <option value="0.5">0.5×</option>
+          <option value="0.75">0.75×</option>
+          <option value="1" selected>1×</option>
+          <option value="1.25">1.25×</option>
+          <option value="1.5">1.5×</option>
+          <option value="2">2×</option>
+        </select>
+      </div>
+
+      <section class="editor">
+        <div class="editor-toolbar">
+          <div class="editor-title">
+            <h3>Transcript</h3>
+            <span class="muted small" id="editorMeta"></span>
+          </div>
+          <div class="find">
+            <svg viewBox="0 0 24 24" class="icon"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input id="findInput" placeholder="Find" spellcheck="false">
+            <span class="find-count" id="findCount"></span>
+            <input id="replaceInput" placeholder="Replace with" spellcheck="false">
+            <button class="btn small" id="btnReplace">Replace all</button>
+          </div>
+          <div class="editor-actions">
+            <button class="btn small ghost" id="btnReview" title="Jump to the next word Whisper was unsure about"></button>
+            <button class="btn small ghost icon-only" id="btnUndo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" class="icon"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+            <button class="btn small ghost icon-only" id="btnRedo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" class="icon"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
+            <label class="switch small" title="Scroll the transcript with playback">
+              <input type="checkbox" id="followToggle" checked>
+              <span class="switch-track"></span>
+              Follow
+            </label>
+          </div>
+        </div>
+
+        <div class="inspector" id="inspector"></div>
+        <div class="lines" id="lines" tabindex="-1"></div>
+        <div class="editor-hint">
+          <kbd>Click</kbd> select · <kbd>Double-click</kbd>/<kbd>Enter</kbd> edit · type a space to split ·
+          <kbd>←</kbd><kbd>→</kbd> move · <kbd>B</kbd> line break · <kbd>M</kbd> merge · <kbd>Del</kbd> delete · <kbd>Space</kbd> play
+        </div>
+      </section>
+    </section>
+
+    <aside class="style-panel" id="stylePanel"></aside>
+  </main>
+
+  <!-- Export dialog -->
+  <dialog id="exportDialog" class="dialog">
+    <form method="dialog" class="dialog-inner" id="exportForm">
+      <header class="dialog-head">
+        <h2>Export</h2>
+        <button class="btn ghost icon-only" value="cancel" title="Close"><svg viewBox="0 0 24 24" class="icon"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </header>
+      <div class="dialog-body" id="exportBody"></div>
+    </form>
+  </dialog>
+
+  <dialog id="promptDialog" class="dialog small">
+    <form method="dialog" class="dialog-inner">
+      <div class="dialog-body">
+        <label class="field">
+          <span id="promptLabel">Name</span>
+          <input id="promptInput" required>
+        </label>
+        <div class="row-gap end">
+          <button class="btn ghost" value="cancel" formnovalidate>Cancel</button>
+          <button class="btn primary" value="ok">Save</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toasts" id="toasts"></div>
+  <audio id="player" preload="auto"></audio>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

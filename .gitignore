@@ -1,0 +1,15 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Projects, uploads, fonts and renders created by the app
+workspace/
+
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
