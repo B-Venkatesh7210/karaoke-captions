@@ -128,10 +128,16 @@ export class Preview {
       span.textContent = words[i].text;
       Object.assign(span.style, css.word);
       if (css.mode === "fill") {
-        span.style.backgroundClip = "text";
-        span.style.webkitBackgroundClip = "text";
-        span.style.color = "transparent";
-        this.fillWords.push({ span, i });
+        span.classList.add("cap-fill");
+        span.style.color = css.text;
+        const sweep = document.createElement("span");
+        sweep.className = "cap-sweep";
+        sweep.textContent = words[i].text;
+        Object.assign(sweep.style, css.word);
+        sweep.style.textShadow = "none";
+        sweep.style.color = css.highlight;
+        span.append(sweep);
+        this.fillWords.push({ sweep, i });
       } else {
         const lit = i === active || (css.mode === "progressive" && i < active);
         span.style.color = lit ? css.highlight : css.text;
@@ -145,13 +151,11 @@ export class Preview {
 
   updateFill(line, t) {
     const words = state.words;
-    const { css } = this;
-    for (const { span, i } of this.fillWords) {
+    for (const { sweep, i } of this.fillWords) {
       const w = words[i];
       const end = i < line.to ? words[i + 1].start : w.end;
       const p = end > w.start ? Math.max(0, Math.min(1, (t - w.start) / (end - w.start))) : t >= w.start ? 1 : 0;
-      const pct = (p * 100).toFixed(1);
-      span.style.backgroundImage = `linear-gradient(90deg, ${css.highlight} ${pct}%, ${css.text} ${pct}%)`;
+      sweep.style.clipPath = `inset(-50% ${(100 - p * 100).toFixed(1)}% -50% 0)`;
     }
   }
 

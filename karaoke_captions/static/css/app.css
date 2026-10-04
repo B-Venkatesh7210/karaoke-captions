@@ -214,6 +214,8 @@ select { padding-right: 28px; appearance: none;
 .cap-line { position: absolute; text-align: center; white-space: nowrap; }
 .cap-box { display: inline-block; }
 .cap-w { display: inline; }
+.cap-fill { position: relative; display: inline-block; }
+.cap-sweep { position: absolute; left: 0; top: 0; }
 
 /* transport */
 .transport { display: flex; align-items: center; gap: 12px; }
