@@ -23,6 +23,30 @@ def cmd_serve(args: argparse.Namespace) -> None:
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
 
 
+def _console_steps():
+    from .core.progress import Steps
+
+    labels = {"decode": "Decoding audio", "download": "Downloading model", "load": "Loading model", "transcribe": "Transcribing"}
+
+    class ConsoleSteps(Steps):
+        def _line(self, step_id: str, status: str, detail: str | None, end: str = "") -> None:
+            print(f"\r  {labels.get(step_id, step_id):<18} {status:>7}  {detail or ''}".ljust(90), end=end, flush=True)
+
+        def begin(self, step_id, detail="", **_):
+            self._line(step_id, "0%", detail)
+
+        def update(self, step_id, progress, detail=None, *, estimated=False, heartbeat=False):
+            self._line(step_id, f"{'~' if estimated else ''}{progress * 100:.0f}%", detail)
+
+        def done(self, step_id, detail=None):
+            self._line(step_id, "done", detail, end="\n")
+
+        def skip(self, step_id, detail=""):
+            self._line(step_id, "skipped", detail, end="\n")
+
+    return ConsoleSteps()
+
+
 def cmd_transcribe(args: argparse.Namespace) -> None:
     from .core.transcribe import TranscribeOptions, transcribe
 
@@ -32,12 +56,9 @@ def cmd_transcribe(args: argparse.Namespace) -> None:
         {"model": args.model, "language": args.language, "device": args.device, "prompt": args.prompt}
     )
 
-    def progress(value: float, message: str) -> None:
-        print(f"\r  {value * 100:5.1f}%  {message}".ljust(70), end="", flush=True)
-
-    result = transcribe(audio, options, on_progress=progress)
+    result = transcribe(audio, options, steps=_console_steps())
     out.write_text(json.dumps(result, indent=2, ensure_ascii=False), "utf-8")
-    print(f"\n  Saved {len(result['words'])} words to {out}")
+    print(f"  Saved {len(result['words'])} words to {out}")
 
 
 def cmd_render(args: argparse.Namespace) -> None:

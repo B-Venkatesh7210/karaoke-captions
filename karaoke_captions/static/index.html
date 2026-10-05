@@ -96,8 +96,7 @@
       </div>
 
       <div class="upload-progress" id="uploadProgress" hidden>
-        <div class="progress"><div id="uploadBar"></div></div>
-        <span id="uploadLabel">Uploading…</span>
+        <div id="uploadSteps" class="steps"></div>
       </div>
     </section>
 
@@ -113,8 +112,8 @@
       <div class="pulse"><span></span><span></span><span></span><span></span><span></span></div>
       <h2 id="workTitle">Transcribing</h2>
       <p id="workMessage" class="muted">Starting…</p>
-      <div class="progress big"><div id="workBar"></div></div>
-      <div class="work-meta"><span id="workPct">0%</span><span id="workElapsed"></span></div>
+      <div id="workSteps" class="steps"></div>
+      <div class="work-meta"><span id="workPct"></span><span id="workElapsed"></span></div>
       <p class="muted small">You can leave this page. The work continues in the background.</p>
       <button id="btnCancelWork" class="btn ghost">Cancel</button>
     </div>

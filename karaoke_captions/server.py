@@ -15,9 +15,10 @@ from .core import media
 from .core.ass_writer import build_ass, write_ass_files
 from .core.fonts import FontRegistry
 from .core.layout import parse_words
+from .core.progress import Timings, fmt_bytes, fmt_duration
 from .core.style import Style
 from .core.transcribe import MODELS, TranscribeOptions, transcribe, whisper_available
-from .jobs import Job, JobManager
+from .jobs import Job, JobManager, Step
 from .projects import ProjectStore, TemplateStore, safe_filename
 
 PACKAGE_DIR = Path(__file__).resolve().parent
@@ -40,6 +41,7 @@ def create_app(workspace: Path | None = None) -> FastAPI:
     user_presets_dir = workspace / "presets"
     user_presets_dir.mkdir(exist_ok=True)
     jobs = JobManager()
+    timings = Timings(workspace / "cache" / "timings.json")
 
     app = FastAPI(title="Karaoke Captions", version=__version__)
 
@@ -72,6 +74,15 @@ def create_app(workspace: Path | None = None) -> FastAPI:
         if len(raw_words) > MAX_SNAPSHOT_WORDS:
             raise HTTPException(413, "Too many words")
         return style, parse_words(raw_words)
+
+    def transcribe_steps(uploaded: bool, imported: bool) -> list[Step]:
+        steps = [Step("upload", "Uploading file")] if uploaded else []
+        steps += [Step("queue", "Waiting in queue", optional=True), Step("probe", "Reading media"),
+                  Step("preview", "Preparing preview")]
+        if imported:
+            return steps + [Step("import", "Importing word timings")]
+        return steps + [Step("decode", "Decoding audio"), Step("download", "Downloading model"),
+                        Step("load", "Loading model"), Step("transcribe", "Transcribing")]
 
     def project_payload(project: dict) -> dict:
         job = jobs.active_for(project["id"], "transcribe")
@@ -169,21 +180,38 @@ def create_app(workspace: Path | None = None) -> FastAPI:
         project["transcribe"] = options.__dict__
         store.save(project)
 
-        jobs.submit("transcribe", project["id"], lambda job: _prepare_and_transcribe(job, project["id"], options, imported))
+        job = jobs.create("transcribe", project["id"], transcribe_steps(True, imported is not None))
+        job.done("upload", fmt_bytes(dest.stat().st_size))
+        jobs.start(job, lambda job: _prepare_and_transcribe(job, project["id"], options, imported))
         return project_payload(store.load(project["id"]))
 
     def _prepare_and_transcribe(job: Job, project_id: str, options: TranscribeOptions, imported: list | None):
         project = store.load(project_id)
         folder = store.dir(project_id)
+
+        def cancelled() -> bool:
+            return job.cancel_requested
+
         try:
-            job.message = "Reading media…"
+            job.begin("probe")
             src = media_path(project)
             info = media.probe(src)
             if not info.has_audio:
                 raise RuntimeError("This file has no audio track.")
-            if not project["media"].get("duration"):
-                job.message = "Preparing preview…"
-                playback = media.make_browser_proxy(src, info, folder)
+            kind = f"{info.width}×{info.height} video" if info.has_video else "Audio"
+            job.done("probe", f"{kind} · {fmt_duration(info.duration)}")
+
+            if project["media"].get("duration"):
+                job.skip("preview", "Already prepared")
+            else:
+                if media.needs_browser_proxy(src, info):
+                    job.begin("preview", "Converting so the browser can play it")
+                    playback = media.make_browser_proxy(src, info, folder, on_progress=lambda p: job.update("preview", p),
+                                                        should_cancel=cancelled)
+                    job.done("preview", "Converted for the browser")
+                else:
+                    playback = src
+                    job.skip("preview", "Plays directly, no conversion needed")
                 project["media"].update(info.to_dict(), playback=playback.name)
                 if info.has_video and info.width and info.height and info.height > info.width:
                     project["style"].update(width=1080, height=1920, font_size=80, max_words=3, margin_v=380)
@@ -191,8 +219,10 @@ def create_app(workspace: Path | None = None) -> FastAPI:
                     project["preview"] = {"background": "media", "template_id": None}
 
             if imported is not None:
+                job.begin("import")
                 project.update(words=imported, status="ready", error=None)
                 store.save(project)
+                job.done("import", f"{len(imported)} words")
                 return None
 
             if not whisper_available():
@@ -201,22 +231,17 @@ def create_app(workspace: Path | None = None) -> FastAPI:
             project["status"] = "transcribing"
             store.save(project)
 
-            def progress(value: float, message: str) -> None:
-                job.progress = value
-                job.message = message
-
-            result = transcribe(src, options, on_progress=progress, should_cancel=lambda: job.cancel_requested)
+            result = transcribe(src, options, steps=job, should_cancel=cancelled, duration=info.duration, timings=timings)
             project = store.load(project_id)
             project.update(words=result["words"], language=result["language"], status="ready", error=None)
             store.save(project)
         except BaseException as exc:
             project = store.load(project_id)
-            cancelled = job.cancel_requested
             if project.get("words"):
                 project["status"] = "ready"
             else:
                 project["status"] = "error"
-                project["error"] = "Transcription cancelled." if cancelled else str(exc)
+                project["error"] = "Transcription cancelled." if job.cancel_requested else str(exc)
             store.save(project)
             raise
         return None
@@ -259,7 +284,8 @@ def create_app(workspace: Path | None = None) -> FastAPI:
         options = TranscribeOptions.from_dict(body)
         project.update(status="transcribing", error=None, transcribe=options.__dict__, words=[] if body.get("replace") else project["words"])
         store.save(project)
-        jobs.submit("transcribe", project_id, lambda job: _prepare_and_transcribe(job, project_id, options, None))
+        job = jobs.create("transcribe", project_id, transcribe_steps(False, False))
+        jobs.start(job, lambda job: _prepare_and_transcribe(job, project_id, options, None))
         return project_payload(store.load(project_id))
 
     @app.get("/api/projects/{project_id}/media")

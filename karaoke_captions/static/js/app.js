@@ -4,8 +4,9 @@ import { ExportDialog } from "./export.js";
 import { loadFontList } from "./fonts.js";
 import { Preview } from "./preview.js";
 import { state } from "./state.js";
+import { clearSteps, renderSteps } from "./steps.js";
 import { buildStylePanel } from "./style-panel.js";
-import { $, debounce, el, fmtTime, toast } from "./util.js";
+import { $, debounce, el, fmtBytes, fmtTime, toast } from "./util.js";
 
 const VIEWS = ["viewHome", "viewWorking", "viewError", "viewStudio"];
 const SOLID_BACKGROUNDS = [
@@ -373,12 +374,12 @@ async function watchProject(id) {
 
   show("viewWorking");
   const job = project.job;
-  const pct = job ? job.progress : 0;
+  const steps = job?.steps || [];
   $("#workTitle").textContent = project.status === "transcribing" ? "Transcribing" : "Preparing your file";
   $("#workMessage").textContent = job?.message || "Starting…";
-  $("#workBar").style.width = `${(pct * 100).toFixed(1)}%`;
-  $("#workBar").parentElement.classList.toggle("indeterminate", pct <= 0);
-  $("#workPct").textContent = pct > 0 ? `${Math.round(pct * 100)}%` : "";
+  $("#workMessage").hidden = steps.length > 0;
+  renderSteps($("#workSteps"), steps);
+  $("#workPct").textContent = job ? `${Math.round(job.progress * 100)}% overall` : "";
   $("#workElapsed").textContent = job ? `${fmtTime(job.elapsed, false)} elapsed` : "";
   $("#btnCancelWork").onclick = () => job && api.cancelJob(job.id);
   workPoll = setTimeout(() => watchProject(id), 1000);
@@ -390,6 +391,7 @@ const onHome = () => !/^#\/p\//.test(location.hash);
 
 async function renderHome() {
   $("#uploadProgress").hidden = true;
+  clearSteps($("#uploadSteps"));
   const [health, projects] = await Promise.all([api.health().catch(() => null), api.projects().catch(() => [])]);
   if (!onHome()) return;
   show("viewHome");
@@ -446,13 +448,22 @@ async function startUpload(file) {
     model: $("#optModel").value, language: $("#optLanguage").value, device: $("#optDevice").value, prompt: $("#optPrompt").value,
   }));
 
+  const upcoming = [["probe", "Reading media"], ["preview", "Preparing preview"],
+    ...(words ? [["import", "Importing word timings"]]
+      : [["decode", "Decoding audio"], ["download", "Downloading model"], ["load", "Loading model"], ["transcribe", "Transcribing"]])];
+  const started = performance.now();
+  const drawUpload = (p) => renderSteps($("#uploadSteps"), [
+    {
+      id: "upload", label: `Uploading ${file.name}`, status: "active", progress: p,
+      elapsed: (performance.now() - started) / 1000,
+      detail: p < 1 ? `${fmtBytes(Math.round(p * file.size))} / ${fmtBytes(file.size)}` : "Saving on the server…",
+    },
+    ...upcoming.map(([id, label]) => ({ id, label, status: "pending", progress: 0 })),
+  ]);
   $("#uploadProgress").hidden = false;
-  $("#uploadLabel").textContent = `Uploading ${file.name}…`;
+  drawUpload(0);
   try {
-    const project = await api.createProject(fd, (p) => {
-      $("#uploadBar").style.width = `${(p * 100).toFixed(1)}%`;
-      $("#uploadLabel").textContent = p < 1 ? `Uploading ${file.name}… ${Math.round(p * 100)}%` : "Processing…";
-    });
+    const project = await api.createProject(fd, drawUpload);
     $("#fileInput").value = "";
     $("#wordsInput").value = "";
     location.hash = `#/p/${project.id}`;

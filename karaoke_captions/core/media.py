@@ -115,23 +115,29 @@ def run_ffmpeg(
         raise FFmpegError(tail or f"ffmpeg exited with code {proc.returncode}")
 
 
-def make_browser_proxy(src: Path, info: MediaInfo, dest_dir: Path, stem: str = "preview") -> Path:
+def needs_browser_proxy(src: Path, info: MediaInfo) -> bool:
+    return src.suffix.lower() not in (BROWSER_VIDEO if info.has_video else BROWSER_AUDIO)
+
+
+def make_browser_proxy(
+    src: Path,
+    info: MediaInfo,
+    dest_dir: Path,
+    stem: str = "preview",
+    on_progress: Callable[[float], None] | None = None,
+    should_cancel: Callable[[], bool] | None = None,
+) -> Path:
     """Return a file the browser can play, transcoding only when needed."""
-    ext = src.suffix.lower()
-    if info.has_video:
-        if ext in BROWSER_VIDEO:
-            return src
-        dest = dest_dir / f"{stem}.mp4"
-        run_ffmpeg(
-            ["-i", str(src), "-vf", "scale=-2:'min(720,ih)'", "-c:v", "libx264", "-preset", "veryfast", "-crf", "26",
-             "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", dest.name],
-            cwd=dest_dir,
-        )
-        return dest
-    if ext in BROWSER_AUDIO:
+    if not needs_browser_proxy(src, info):
         return src
-    dest = dest_dir / f"{stem}.m4a"
-    run_ffmpeg(["-i", str(src), "-vn", "-c:a", "aac", "-b:a", "160k", dest.name], cwd=dest_dir)
+    if info.has_video:
+        dest = dest_dir / f"{stem}.mp4"
+        args = ["-i", str(src), "-vf", "scale=-2:'min(720,ih)'", "-c:v", "libx264", "-preset", "veryfast", "-crf", "26",
+                "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", dest.name]
+    else:
+        dest = dest_dir / f"{stem}.m4a"
+        args = ["-i", str(src), "-vn", "-c:a", "aac", "-b:a", "160k", dest.name]
+    run_ffmpeg(args, cwd=dest_dir, duration=info.duration, on_progress=on_progress, should_cancel=should_cancel)
     return dest
 
 

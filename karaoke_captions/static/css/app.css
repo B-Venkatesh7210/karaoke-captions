@@ -160,9 +160,45 @@ select { padding-right: 28px; appearance: none;
 
 /* ---------- working ---------- */
 .view-center { min-height: calc(100vh - var(--topbar)); display: grid; place-items: center; padding: 24px; }
-.working-card { width: min(520px, 100%); padding: 32px; display: flex; flex-direction: column; gap: 14px; text-align: center; align-items: stretch; }
+.working-card { width: min(580px, 100%); padding: 32px; display: flex; flex-direction: column; gap: 14px; text-align: center; align-items: stretch; }
 .working-card .btn { align-self: center; }
 .work-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+
+/* step-by-step progress */
+.steps { display: flex; flex-direction: column; gap: 12px; text-align: left; }
+.step { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; }
+.step-icon {
+  width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; border: 2px solid var(--line-2);
+  display: grid; place-items: center; font-size: 11px; font-weight: 700; line-height: 1; color: var(--bg);
+}
+.step-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.step-head, .step-meta { display: flex; justify-content: space-between; gap: 12px; }
+.step-label { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.step-pct { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.step-meta { font-size: 12px; color: var(--muted); }
+.step-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.step-time { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.step-hint { font-size: 12px; color: var(--warn); }
+
+.step.is-pending { opacity: .5; }
+.step.is-active .step-icon { border-color: var(--accent); border-top-color: transparent; animation: spin .8s linear infinite; }
+.step.is-active .step-pct { color: var(--text); }
+.step.is-done .step-icon { background: var(--ok); border-color: var(--ok); }
+.step.is-done .progress > div { background: var(--ok); }
+.step.is-skipped { opacity: .6; }
+.step.is-skipped .step-icon { border-color: var(--line-2); color: var(--muted); }
+.step.is-error .step-icon { background: var(--err); border-color: var(--err); }
+.step.is-error .progress > div { background: var(--err); }
+.step.is-cancelled .step-icon { color: var(--muted); }
+.step.is-estimated .progress > div {
+  background: repeating-linear-gradient(-45deg, var(--accent) 0 8px, #8b5cf6 8px 16px);
+  background-size: 22.6px 100%;
+  animation: stripes 1s linear infinite;
+}
+.step.is-stalled .step-icon { border-color: var(--warn); border-top-color: transparent; }
+.step.is-stalled .progress > div { background: var(--warn); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes stripes { to { background-position: 22.6px 0; } }
 .error-text { color: var(--err); white-space: pre-wrap; word-break: break-word; }
 .pulse { display: flex; justify-content: center; align-items: flex-end; gap: 5px; height: 36px; }
 .pulse span { width: 6px; border-radius: 3px; background: var(--accent); animation: bars 1s ease-in-out infinite; }
